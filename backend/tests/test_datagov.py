@@ -12,8 +12,8 @@ async def test_fetch_datagov_paginates(monkeypatch):
     route=respx.get(f"{settings.data_gov_in_base_url}/{RESOURCE}")
     route.side_effect=[httpx.Response(200,json={"records":[{"commodity":"Onion"}]}),httpx.Response(200,json={"records":[{"commodity":"Potato"}]})]
     rows=await fetch_datagov(RESOURCE,limit=2,max_retries=0)
-    assert [r["commodity"] for r in rows]==["Onion","Potato"]
-    assert route.call_count==2
+    assert [r["commodity"] for r in rows] == ["Onion","Potato"]
+    assert route.call_count == 2
 
 @pytest.mark.asyncio
 @respx.mock
