@@ -1,60 +1,45 @@
 # BharatData — Government & Open Data Intelligence Platform
 
-BharatData is a modular data-ingestion platform for Indian government open datasets and public documents. It combines the official data.gov.in API, an optional Apify actor integration, PDF extraction, normalization, deduplication, PostgreSQL persistence, a FastAPI backend and a React dashboard.
+BharatData collects public Indian government datasets and documents, normalizes the results, detects repeat records and exposes data through an API and dashboard.
 
-## What works in this starter
-- Direct data.gov.in resource API client with pagination and API-key configuration.
-- Optional Apify actor integration (`themineworks/india-data-gov-scraper`).
-- Mandi price ingestion preset for resource `9ef84268-d588-465a-a308-a864a43d0070`.
-- PostgreSQL models for sources, ingestion jobs, records, documents and data-quality checks.
-- Idempotent record upserts using a SHA-256 fingerprint.
-- PDF text/table extraction endpoint using pdfplumber.
-- Searchable records, job/source/metrics endpoints.
-- React dashboard with ingestion controls, metrics and records.
-- Docker Compose for API, PostgreSQL, Redis and frontend.
-- Unit tests for normalization and deduplication helpers.
+## Capabilities in this MVP
+- Official data.gov.in client with offset pagination, bounded retries, exponential backoff and Retry-After support.
+- Mandi-specific normalization, dates/amounts and a stable record identity that excludes mutable price values.
+- Transactional ingestion that updates repeat logical records rather than creating duplicates.
+- Optional Apify provider adapter.
+- Scrapy starter engine with robots.txt compliance, AutoThrottle, retry middleware, cookies, configurable CSS selectors, pagination and resumable JOBDIR runs.
+- Basic PDF text/table extraction, FastAPI API and React dashboard.
+- Mocked API tests, SQLite persistence tests and a GitHub Actions test workflow.
 
-## Integration notes
-1. Create an API key from your data.gov.in account and set `DATA_GOV_IN_API_KEY`.
-2. Apify is optional. Set `APIFY_TOKEN` to enable the actor integration.
-3. Use direct official API access as the preferred provider; Apify is an optional provider/fallback. The actor may be subject to rate limits and charges.
-4. Do not commit `.env` or API tokens.
-5. Respect publisher terms, rate limits and access policies. Do not bypass authentication or access controls.
+## Run
+1. Copy `.env.example` to `.env` and set `DATA_GOV_IN_API_KEY` with your own data.gov.in key.
+2. Run `docker compose up --build`.
+3. API docs: http://localhost:8000/docs; dashboard: http://localhost:5173.
 
-## Quick start (Docker)
-```bash
-cp .env.example .env
-# Edit .env and add DATA_GOV_IN_API_KEY.
-docker compose up --build
-```
-- API docs: http://localhost:8000/docs
-- Frontend: http://localhost:5173
-- Health: http://localhost:8000/health
-
-## Example ingestion requests
-```bash
-curl -X POST http://localhost:8000/api/ingestion/datagov \
-  -H "Content-Type: application/json" \
-  -d '{"resource_id":"9ef84268-d588-465a-a308-a864a43d0070","limit":100,"filters":[]}'
-```
+## Import mandi prices
+Resource UUID: `9ef84268-d588-465a-a308-a864a43d0070`.
 
 ```bash
-curl -X POST http://localhost:8000/api/ingestion/apify \
-  -H "Content-Type: application/json" \
-  -d '{"resource_id":"9ef84268-d588-465a-a308-a864a43d0070","max_results":100,"filters":[]}'
+curl -X POST http://localhost:8000/api/ingestion/datagov -H "Content-Type: application/json" -d '{"resource_id":"9ef84268-d588-465a-a308-a864a43d0070","limit":100,"filters":[]}'
 ```
 
-## API overview
-| Method | Endpoint | Purpose |
-|---|---|---|
-| GET | `/health` | Health check |
-| GET | `/api/metrics` | Platform metrics |
-| GET | `/api/sources` | Registered data sources |
-| GET | `/api/records` | Search stored records |
-| GET | `/api/jobs` | Ingestion job history |
-| POST | `/api/ingestion/datagov` | Fetch official data.gov.in resource |
-| POST | `/api/ingestion/apify` | Run Apify actor and import results |
-| POST | `/api/documents/extract` | Extract text/tables from PDF |
+A valid API key is required for live ingestion. Unit/integration tests use mocked HTTP and do not require a key.
 
-## Current scope and next milestones
-This is an MVP foundation, not yet a production deployment. Add Scrapy/Playwright source adapters, OCR for scanned PDFs, Celery workers, Redis-backed queues, scheduled jobs, richer quality monitoring, history snapshots and authentication before production use.
+## Run Scrapy
+From the backend directory:
+
+```bash
+scrapy list
+scrapy crawl datagov_portal_catalog -O /tmp/portal-pages.jsonl
+```
+
+For a permitted public page, pass source-specific selectors to the configurable spider and reuse the same JOBDIR to resume an interrupted run:
+
+```bash
+scrapy crawl configurable_public -a config='{"name":"sample","allowed_domains":["example.gov.in"],"start_urls":["https://example.gov.in/notices"]}' -s JOBDIR=crawls/sample-notices
+```
+
+The example.gov.in spider is an inactive template, not a real configured source. Verify the actual website's terms, robots.txt and markup before configuring a crawler. Never bypass authentication, CAPTCHAs or access controls.
+
+## Next milestones
+Live credential/resource validation; two inspected and permitted notice sources; Playwright for JavaScript-only pages; Celery/Redis queues; OCR; richer quality checks; Alembic migrations; authentication and deployment monitoring.
