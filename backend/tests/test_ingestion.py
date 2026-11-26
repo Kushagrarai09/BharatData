@@ -22,5 +22,6 @@ def test_mandi_repeat_import_updates_same_record(db):
     assert first["new_records"]==1
     assert second["new_records"]==0 and second["updated_records"]==1
     stored=db.query(DataRecord).all()
-    assert len(stored)==1 and stored[0].payload["_bharatdata"]["modal_price"]=="1550.00"
+    assert len(stored)==1
+    assert stored[0].payload["_bharatdata"]["modal_price"]=="1550.00"
     assert db.query(IngestionJob).count()==2
