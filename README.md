@@ -1,16 +1,26 @@
 # BharatData — Government & Open Data Intelligence Platform
 
-BharatData collects public Indian government datasets and documents, normalizes records, detects repeated logical records and exposes data through a REST API and dashboard.
+## Project Overview
 
-## Implemented foundation
-- Official data.gov.in resource API client with offset pagination, bounded retries, exponential backoff and Retry-After support.
-- Mandi-specific normalization for dates and prices, with a stable record identity excluding mutable price fields.
-- Repeat imports update existing logical records instead of creating duplicates.
-- One-click mandi ingestion API route: POST /api/ingestion/mandi?limit=100.
-- Optional Apify provider adapter.
-- Scrapy starter with robots.txt compliance, AutoThrottle, retries, cookies, configurable CSS selectors, pagination and resumable JOBDIR runs.
-- Basic PDF text/table extraction, FastAPI endpoints and React dashboard.
-- Mocked API tests, SQLite persistence tests, Scrapy parser tests and GitHub Actions backend test workflow.
+BharatData is a government and open-data ingestion platform focused on collecting, cleaning, organizing and serving public Indian datasets. It is designed to turn scattered government data—starting with mandi market prices—into consistent records that can be queried through an API and explored in a dashboard.
+
+### How it works
+
+1. **Collect data from a source.** The primary working ingestion path calls the official data.gov.in resource API. It requests records in pages using an offset, and retries temporary failures such as rate limits and server errors with bounded exponential backoff. An optional Apify adapter is also available. The Scrapy package provides a reusable crawler foundation for permitted public websites; its example notice and mandi spiders are templates, not preconfigured live sources.
+2. **Normalize the incoming records.** Source-specific normalizers clean text, standardize dates and convert mandi price fields into consistent numeric values. The original source payload is retained so that source details are not lost.
+3. **Identify records consistently.** BharatData creates a stable identity for each logical mandi observation using fields such as state, district, market, commodity, variety, grade and arrival date. Price fields are deliberately excluded from that identity because prices can change while the observation remains the same.
+4. **Save without creating repeat rows.** During a mandi import, a matching logical record is updated with the latest values; a new record is inserted only when no match exists. The ingestion operation reports how many records were seen, added or updated.
+5. **Access and inspect the data.** FastAPI exposes ingestion and document-extraction endpoints, while the React dashboard provides a user interface for working with the platform. PDF text/table extraction is available as a separate capability.
+
+**Current implementation boundary:** the data.gov.in mandi API path is connected to the database persistence flow. Scrapy currently provides crawler infrastructure and parsing examples, but scraped items are not yet wired into that same persistence pipeline. Live imports also require a valid data.gov.in API key in the local environment.
+
+### Main capabilities
+
+- Official data.gov.in client with pagination, bounded retries, exponential backoff and `Retry-After` handling.
+- Mandi-specific normalization and stable-key upserts to reduce duplicate logical records.
+- FastAPI ingestion and PDF extraction endpoints.
+- Optional Apify adapter and a configurable Scrapy foundation with robots.txt compliance, throttling, retries and resumable crawls.
+- React dashboard, automated backend tests and a GitHub Actions test workflow.
 
 ## Setup
 1. Copy .env.example to .env.
