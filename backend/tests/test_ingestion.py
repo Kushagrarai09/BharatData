@@ -11,15 +11,16 @@ def db():
     Base.metadata.create_all(engine)
     session=sessionmaker(bind=engine)()
     try: yield session
-    finally: session.close(); engine.dispose()
+    finally:
+        session.close()
+        engine.dispose()
 
-def test_mandi_import_updates_existing_logical_record(db):
+def test_mandi_repeat_import_updates_same_record(db):
     row={"state":"Maharashtra","district":"Nashik","market":"Nashik","commodity":"Onion","variety":"Red","grade":"FAQ","arrival_date":"25/11/2026","modal_price":"1500"}
     first=save_records(db,"data.gov.in",MANDI_RESOURCE_ID,[row])
     second=save_records(db,"data.gov.in",MANDI_RESOURCE_ID,[{**row,"modal_price":"1550"}])
     assert first["new_records"]==1
     assert second["new_records"]==0 and second["updated_records"]==1
-    records=db.query(DataRecord).all()
-    assert len(records)==1
-    assert records[0].payload["_bharatdata"]["modal_price"]=="1550.00"
+    stored=db.query(DataRecord).all()
+    assert len(stored)==1 and stored[0].payload["_bharatdata"]["modal_price"]=="1550.00"
     assert db.query(IngestionJob).count()==2
